@@ -66,6 +66,7 @@ def create_list(
     headers: dict[str, str],
 ) -> str:
     list_created = False
+    failed = []
     with open(filename) as f:
         for line in f:
             question_slug = line.rstrip()
@@ -75,8 +76,13 @@ def create_list(
                 )
                 list_created = True
             else:
-                time.sleep(3)
-                add_question_to_list(question_slug, list_slug, cookies, headers)
+                time.sleep(1)
+                if not add_question_to_list(question_slug, list_slug, cookies, headers):
+                    failed.append(question_slug)
+    if len(failed) > 0:
+        _err(f"\nFailed to add the following questions to list: ")
+        for question in failed:
+            _err(f"\t{question}")
     return list_slug
 
 
@@ -120,6 +126,8 @@ def add_question_to_new_list(
         response_data = response.json()["data"]["addQuestionToNewFavoriteV2"]
         if not response_data["ok"]:
             raise SystemExit(response_data["error"])
+        print(f"Created list {list_name} with slug: {response_data['slug']}")
+        print(f"Added {question_slug} to list")
         return response_data["slug"]
     except requests.exceptions.RequestException as e:
         _err("Error while adding question to new list")
@@ -128,7 +136,7 @@ def add_question_to_new_list(
 
 def add_question_to_list(
     question_slug: str, list_slug: str, cookies: dict[str, str], headers: dict[str, str]
-):
+) -> bool:
     query = """
         mutation addQuestionToFavoriteV2($favoriteSlug: String!, $questionSlug: String!) {
             addQuestionToFavoriteV2(
@@ -154,10 +162,17 @@ def add_question_to_list(
         response.raise_for_status()
         response_data = response.json()["data"]["addQuestionToFavoriteV2"]
         if not response_data["ok"]:
-            raise SystemExit(response_data["error"])
+            _err(
+                f"Error while adding question {question_slug} to list: response_data['error']"
+            )
+            return False
+        print(f"Added {question_slug} to list")
+        return True
     except requests.exceptions.RequestException as e:
-        _err("Error while adding question to list")
-        raise SystemExit(e)
+        _err(
+            f"Error while adding question {question_slug} to list: {e.response.status_code} - {e.response.reason}"
+        )
+        return False
 
 
 def _err(*args, **kwargs):
@@ -169,7 +184,7 @@ def main():
     cookies = get_cookies(csrf_token=csrf_token, session=session)
     headers = get_headers(csrf_token=csrf_token)
     list_slug = create_list(filename, list_name, is_private, cookies, headers)
-    print(f"Created list: https://leetcode.com/problem-list/{list_slug}")
+    print(f"\nCreated list: https://leetcode.com/problem-list/{list_slug}")
 
 
 if __name__ == "__main__":
