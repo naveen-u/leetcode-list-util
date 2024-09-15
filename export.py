@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 
 import requests
 
@@ -95,13 +96,15 @@ def get_list(
             )
             response.raise_for_status()
             response_data = response.json()["data"]["favoriteQuestionList"]
-            questions.extend([
-                question["titleSlug"]
-                for question in response_data["questions"]
-            ])
+            questions.extend(
+                [question["titleSlug"] for question in response_data["questions"]]
+            )
             if not response_data["hasMore"]:
                 break
             skip += limit
+        print(
+            f"Fetched {len(questions)} questions from list {list_slug}", file=sys.stderr
+        )
         return questions
     except requests.exceptions.RequestException as e:
         raise SystemExit(e)
