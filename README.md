@@ -1,3 +1,3 @@
-## Leetcode List Exporter
+## Leetcode List Utils
 
-Script to export question URLs from leetcode lists into txt files
+Scripts to export and import leetcode lists.
