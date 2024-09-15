@@ -72,25 +72,36 @@ def get_list(
                 questions {
                     titleSlug
                 }
+                hasMore
             }
         }
     """
+    limit = 500
+    skip = 0
     variables = {
         "favoriteSlug": list_slug,
-        "filter": {"positionRoleTagSlug": "", "skip": 0, "limit": 1000},
+        "filter": {"positionRoleTagSlug": "", "skip": skip, "limit": limit},
     }
+    questions = []
     try:
-        response = requests.post(
-            "https://leetcode.com/graphql",
-            json={"query": query, "variables": variables},
-            cookies=cookies,
-            headers=headers,
-        )
-        response.raise_for_status()
-        questions = [
-            question["titleSlug"]
-            for question in response.json()["data"]["favoriteQuestionList"]["questions"]
-        ]
+        while True:
+            variables["filter"]["skip"] = skip
+            variables["filter"]["limit"] = limit
+            response = requests.post(
+                "https://leetcode.com/graphql",
+                json={"query": query, "variables": variables},
+                cookies=cookies,
+                headers=headers,
+            )
+            response.raise_for_status()
+            response_data = response.json()["data"]["favoriteQuestionList"]
+            questions.extend([
+                question["titleSlug"]
+                for question in response_data["questions"]
+            ])
+            if not response_data["hasMore"]:
+                break
+            skip += limit
         return questions
     except requests.exceptions.RequestException as e:
         raise SystemExit(e)
